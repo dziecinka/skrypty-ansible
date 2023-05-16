@@ -1,0 +1,63 @@
+---
+- name: Instalacja Dockera i sklonowanie aplikacji
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Instalacja zależności
+      apt:
+        name: "{{ packages }}"
+        state: present
+      vars:
+        packages:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+      changed_when: false
+
+    - name: Dodanie klucza GPG dla repozytorium Dockera
+      ansible.builtin.apt_key:
+        url: https://download.docker.com/linux/debian/gpg
+        state: present
+
+    - name: Dodanie repozytorium Dockera
+      ansible.builtin.apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/debian {{ ansible_distribution_release }} stable"
+        state: present
+
+    - name: Instalacja Dockera
+      apt:
+        name: docker-ce
+        state: present
+
+    - name: Uruchomienie usługi Docker
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Sklonowanie repozytorium
+      ansible.builtin.git:
+        repo: https://github.com/dziecinka/app.git
+        dest: /app
+        version: master
+        force: true
+
+    - name: Instalacja zależności aplikacji (npm)
+      ansible.builtin.command:
+        cmd: npm install
+        chdir: /app
+        creates: /app/node_modules
+
+    - name: Instalacja zależności aplikacji (yarn)
+      ansible.builtin.command:
+        cmd: yarn install
+        chdir: /app
+        creates: /app/node_modules
+
+    - name: Uruchomienie aplikacji
+      ansible.builtin.command:
+        cmd: node aplikacja.js
+        chdir: /app
