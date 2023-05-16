@@ -1,0 +1,9 @@
+---
+- name: Zmiana nazwy hosta na serwerze Netcloud24.com
+  hosts: DEV
+  become: true
+
+  tasks:
+    - name: Zmiana nazwy hosta
+      hostname:
+        name: demo.netcloud24.com

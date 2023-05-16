@@ -1,0 +1,17 @@
+---
+- name: Instaluj pakiety na Debianie
+  hosts: DEV
+  become: yes
+
+  tasks:
+    - name: Instaluj mc, htop, nload, mc, iptraf
+      apt:
+        name:
+          - mc
+          - htop
+          - nload
+          - mc
+          - iptraf
+          - gnupg
+          - build-essential
+        state: present

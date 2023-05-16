@@ -1,0 +1,64 @@
+---
+- name: Install Node.js, NVM, and PM2 for all users
+  hosts: DEV
+
+  tasks:
+    - name: Install dependencies
+      become: true
+      become_method: sudo
+      apt:
+        name: ['curl', 'git']
+        state: present
+
+    - name: Install NVM
+      become: true
+      become_method: sudo
+      shell: curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+      args:
+        creates: /home/{{ ansible_user }}/.nvm
+
+    - name: Add NVM sourcing to bashrc
+      become: true
+      become_method: sudo
+      lineinfile:
+        dest: /home/{{ ansible_user }}/.bashrc
+        line: |
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+          [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+    - name: Install Node.js using NVM
+      become: true
+      become_method: sudo
+      shell: source /home/{{ ansible_user }}/.bashrc && nvm install stable
+      args:
+        creates: /home/{{ ansible_user }}/.nvm/versions/node
+
+    - name: Install PM2
+      become: true
+      become_method: sudo
+      shell: source /home/{{ ansible_user }}/.bashrc && npm install -g pm2
+      args:
+        creates: /home/{{ ansible_user }}/.nvm/versions/node/*/lib/node_modules/pm2
+
+    - name: Set NVM default alias
+      become: true
+      become_method: sudo
+      shell: source /home/{{ ansible_user }}/.bashrc && nvm alias default stable
+
+    - name: Add NVM and PM2 paths to system environment
+      become: true
+      become_method: sudo
+      lineinfile:
+        dest: /etc/environment
+        line: |
+          NVM_DIR="/home/{{ ansible_user }}/.nvm"
+          PM2_HOME="/home/{{ ansible_user }}/.pm2"
+      notify:
+        - Reload system environment
+
+  handlers:
+    - name: Reload system environment
+      become: true
+      become_method: sudo
+      command: "systemctl reload-or-restart systemd-logind"

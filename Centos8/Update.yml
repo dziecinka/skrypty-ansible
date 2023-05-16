@@ -1,0 +1,10 @@
+---
+- name: Aktualizacja pakietów przy użyciu yum NETCLOUD24.COM
+  hosts: DEV
+  become: true
+
+  tasks:
+    - name: Aktualizacja pakietów
+      yum:
+        name: '*'
+        state: latest

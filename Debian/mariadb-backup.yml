@@ -1,0 +1,48 @@
+---
+- name: Ustawianie regularnych kopii zapasowych MySQL
+  hosts: DEV
+  become: yes
+
+  vars:
+    mysql_root_password: "zaq1@WSXpl"
+
+  tasks:
+    - name: Instaluj pakiet cron
+      apt:
+        name: cron
+        state: present
+
+    - name: Utwórz skrypt kopii zapasowej
+      copy:
+        dest: /root/mysql_backup.sh
+        content: |
+          #!/bin/bash
+          TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+          BACKUP_DIR="/root/mysql_backups"
+          MYSQL_USER="root"
+          MYSQL_PASSWORD="{{ mysql_root_password }}"
+          DATABASES=$(mysql -u $MYSQL_USER -p$MYSQL_PASSWORD -e "SHOW DATABASES;" | grep -Ev "(Database|information_schema|performance_schema|mysql)")
+          
+          for DB in $DATABASES; do
+            FILENAME="$BACKUP_DIR/$DB-$TIMESTAMP.sql"
+            mysqldump -u $MYSQL_USER -p$MYSQL_PASSWORD --single-transaction --routines --triggers --databases $DB > $FILENAME
+          done
+
+    - name: Utwórz katalog na kopie zapasowe
+      file:
+        path: /root/mysql_backups
+        state: directory
+
+    - name: Dodaj zadanie cron
+      cron:
+        name: "Tworzenie kopii zapasowych MySQL"
+        minute: "0"
+        hour: "*/8"
+        user: root
+        job: "/bin/bash /root/mysql_backup.sh"
+
+    - name: Uruchom usługę cron
+      service:
+        name: cron
+        state: started
+        enabled: yes

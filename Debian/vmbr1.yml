@@ -1,0 +1,49 @@
+---
+- name: Configure network settings
+  hosts: DEV  # Replace with the appropriate host or group name
+
+  tasks:
+    - name: Configure network interface vmbr1
+      become: true
+      become_method: sudo
+      lineinfile:
+        path: /etc/network/interfaces
+        line: "{{ item }}"
+      with_items:
+        - "auto vmbr1"
+        - "iface vmbr1 inet static"
+        - "address 172.16.61.1"
+        - "netmask 255.255.255.0"
+        - "bridge_ports none"
+        - "bridge_stp off"
+        - "bridge_fd 0"
+
+    - name: Enable IP forwarding
+      become: true
+      become_method: sudo
+      sysctl:
+        name: net.ipv4.ip_forward
+        value: 1
+        state: present
+      notify:
+        - Restart networking service
+
+    - name: Configure iptables MASQUERADE rule
+      become: true
+      become_method: sudo
+      lineinfile:
+        path: /etc/rc.local
+        line: "{{ item }}"
+        create: yes
+      with_items:
+        - "iptables -t nat -A POSTROUTING -s '172.16.61.0/24' -o vmbr0 -j MASQUERADE"
+      notify:
+        - Restart networking service
+
+  handlers:
+    - name: Restart networking service
+      become: true
+      become_method: sudo
+      service:
+        name: networking
+        state: restarted

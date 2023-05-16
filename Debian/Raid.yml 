@@ -1,0 +1,34 @@
+---
+- name: Configure RAID 1 on existing system Netcloud24.com
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Install mdadm package
+      apt:
+        name: mdadm
+        state: present
+
+    - name: Create RAID partition on sdb
+      parted:
+        device: /dev/sdb
+        number: 1
+        state: present
+        part_end: 100%
+        flags: [raid]
+
+    - name: Create RAID array
+      command: mdadm --create /dev/md0 --level=1 --raid-devices=2 missing /dev/sdb1
+      args:
+        creates: /dev/md0
+      changed_when: false
+
+    - name: Save RAID configuration
+      command: mdadm --detail --scan >> /etc/mdadm/mdadm.conf
+      args:
+        creates: /etc/mdadm/mdadm.conf
+      changed_when: false
+
+    - name: Update initramfs
+      command: update-initramfs -u
+      changed_when: false

@@ -1,0 +1,38 @@
+---
+- name: Instalacja Dockera i Docker Compose na serwerze Ubuntu NETCLOUD24.COM
+  hosts: DEV
+  become: true
+
+  tasks:
+    - name: Zaktualizuj cache pakietów APT
+      apt:
+        update_cache: yes
+
+    - name: Zainstaluj zależności
+      apt:
+        name: ['apt-transport-https', 'ca-certificates', 'curl', 'gnupg-agent', 'software-properties-common']
+        state: present
+
+    - name: Dodaj klucz GPG dla repozytorium Docker
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Dodaj repozytorium Docker
+      apt_repository:
+        repo: 'deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable'
+        state: present
+
+    - name: Zaktualizuj cache pakietów APT (ponownie)
+      apt:
+        update_cache: yes
+
+    - name: Zainstaluj Docker
+      apt:
+        name: docker-ce
+        state: present
+
+    - name: Zainstaluj Docker Compose
+      shell: |
+        curl -sSL https://github.com/docker/compose/releases/latest/download/docker-compose-Linux-x86_64 -o /usr/local/bin/docker-compose
+        chmod +x /usr/local/bin/docker-compose

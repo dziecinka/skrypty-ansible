@@ -1,0 +1,13 @@
+---
+- name: Aktualizacja repozytoriów APT i pakietów NETCLOUD24.COM
+  hosts: DEV
+  become: true
+
+  tasks:
+    - name: Aktualizacja repozytoriów APT
+      apt:
+        update_cache: yes
+
+    - name: Aktualizacja pakietów
+      apt:
+        upgrade: yes

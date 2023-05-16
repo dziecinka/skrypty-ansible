@@ -1,0 +1,54 @@
+---
+- name: Instaluj i konfiguruj serwer MariaDB na Debianie 11 NETCLOUD24.COM
+  hosts: DEV
+  become: yes
+
+  vars:
+    mysql_root_password: "zaq1@WSXpl"
+
+  tasks:
+    - name: Dodaj MariaDB APT key
+      apt_key:
+        url: https://mariadb.org/mariadb_release_signing_key.asc
+        state: present
+
+    - name: Dodaj MariaDB APT repository
+      apt_repository:
+        repo: "deb [arch=amd64,arm64,ppc64el] http://mirror.zol.co.zw/mariadb/repo/10.6/debian bullseye main"
+        state: present
+
+    - name: Zaktualizuj listę pakietów
+      apt:
+        update_cache: yes
+
+    - name: Instaluj pakiet MariaDB
+      apt:
+        name: mariadb-server
+        state: present
+
+    - name: Uruchom serwer MariaDB
+      service:
+        name: mysql
+        state: started
+
+    - name: Ustaw hasło dla użytkownika root
+      mysql_user:
+        name: root
+        password: "{{ mysql_root_password }}"
+        login_user: root
+        login_password: ""
+        host: localhost
+        priv: "*.*:ALL,GRANT"
+      notify: Restart MariaDB
+
+    - name: Utwórz plik konfiguracyjny dla zezwolenia na połączenie z zewnątrz
+      template:
+        src: mariadb.cnf.j2
+        dest: /etc/mysql/mariadb.conf.d/50-server.cnf
+      notify: Restart MariaDB
+
+  handlers:
+    - name: Restart MariaDB
+      service:
+        name: mysql
+        state: restarted

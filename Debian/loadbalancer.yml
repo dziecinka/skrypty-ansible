@@ -1,0 +1,50 @@
+---
+- name: Konfiguruj Load Balancer Nginx z SSL dla domeny demo.netcloud24.com
+  hosts: DEVOK
+  become: yes
+
+  vars:
+    domain: "demo.netcloud24.com"
+
+  tasks:
+    - name: Instaluj pakiet Nginx
+      apt:
+        name: nginx
+        state: present
+
+    - name: Zainstaluj zależności Certbot
+      apt:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - software-properties-common
+        - certbot
+        - python3-certbot-nginx
+
+    - name: Wygeneruj certyfikat SSL LetsEncrypt
+      command: "certbot certonly --nginx -d {{ domain }}"
+
+    - name: Skonfiguruj Load Balancer Nginx
+      template:
+        src: nginx_load_balancer.conf.j2
+        dest: /etc/nginx/sites-available/load_balancer.conf
+      notify: Restart Nginx
+
+    - name: Usuń domyślną konfigurację Nginx
+      file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+
+    - name: Włącz konfigurację Load Balancer Nginx
+      file:
+        src: /etc/nginx/sites-available/load_balancer.conf
+        dest: /etc/nginx/sites-enabled/load_balancer.conf
+        state: link
+      notify: Restart Nginx
+
+  handlers:
+    - name: Restart Nginx
+      service:
+        name: nginx
+        state: restarted
+
